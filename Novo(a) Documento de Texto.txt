@@ -1,0 +1,91 @@
+Código Atualizado
+python
+Copiar código
+import requests
+from bs4 import BeautifulSoup
+
+# URL da página de decks
+url_decks = 'https://www.ligamagic.com.br/?view=dks/decks&filtro_formato=1'
+
+# Fazer a requisição HTTP
+response = requests.get(url_decks)
+response.raise_for_status()
+
+# Analisar o conteúdo HTML
+soup = BeautifulSoup(response.text, 'html.parser')
+
+# Encontrar todas as divs com a classe deckhome
+divs_deckhome = soup.find_all('div', class_='deckhome')
+
+# Extrair URLs dos decks
+deck_urls = []
+for div in divs_deckhome:
+    a_tag = div.find('a', href=True)  # Encontrar o link dentro da div
+    if a_tag:
+        deck_urls.append(a_tag['href'])
+
+# Converter URLs relativas em absolutas
+deck_urls = [f'https://www.ligamagic.com.br{url}' for url in deck_urls]
+
+print(f'URLs dos decks encontrados: {deck_urls}')
+
+def extrair_cartas_do_deck(deck_url):
+    # Fazer a requisição HTTP para o deck específico
+    response = requests.get(deck_url)
+    response.raise_for_status()
+    
+    # Analisar o conteúdo HTML
+    soup = BeautifulSoup(response.text, 'html.parser')
+    
+    # Dicionário para armazenar as cartas
+    cartas = {'Criaturas': [], 'Mágicas': [], 'Terrenos': []}
+
+    # Função auxiliar para extrair cartas de uma seção específica
+    def extrair_cartas_por_titulo(titulo):
+        cartas_secao = []
+        secao_div = soup.find('div', class_='pdeck-block')
+        if secao_div:
+            table = secao_div.find('table')
+            if table:
+                rows = table.find_all('tr')
+                for row in rows:
+                    card_name_td = row.find('td', class_='deck-card')
+                    quantity_td = row.find('td', class_='deck-qty')
+                    if card_name_td and quantity_td:
+                        card_name = card_name_td.text.strip()
+                        quantity = quantity_td.text.strip()
+                        cartas_secao.append(f'{card_name} ({quantity})')
+        return cartas_secao
+
+    # Extraindo cartas de cada seção
+    cartas['Criaturas'] = extrair_cartas_por_titulo('Criaturas')
+    cartas['Mágicas'] = extrair_cartas_por_titulo('Mágicas')
+    cartas['Terrenos'] = extrair_cartas_por_titulo('Terrenos')
+    
+    return cartas
+
+# Scraping dos detalhes de cada deck
+for url in deck_urls:
+    print(f'\nDetalhes do deck: {url}')
+    cartas_do_deck = extrair_cartas_do_deck(url)
+    print('Criaturas:', cartas_do_deck['Criaturas'])
+    print('Mágicas:', cartas_do_deck['Mágicas'])
+    print('Terrenos:', cartas_do_deck['Terrenos'])
+Explicação das Alterações
+Encontrar a <div> com Classe pdeck-block:
+
+A função extrair_cartas_por_titulo agora procura pela <div> com a classe pdeck-block, que contém a tabela com os detalhes das cartas.
+Extrair Nomes e Quantidades das Cartas:
+
+Dentro da <div>, procuramos a <table>. Para cada linha (<tr>) da tabela, encontramos as células (<td>) com as classes deck-card e deck-qty para obter o nome e a quantidade das cartas.
+Organizar as Cartas:
+
+As cartas são organizadas em uma lista para cada categoria (Criaturas, Mágicas, Terrenos) com o formato nome (quantidade).
+Considerações
+Validação de Seções: A função extrair_cartas_por_titulo pode precisar de ajustes se houver múltiplas seções ou se a estrutura HTML variar.
+Manutenção: Certifique-se de verificar periodicamente se a estrutura do HTML do site muda, o que pode exigir atualizações no código.
+Com essas alterações, o scraper deve ser capaz de extrair as informações detalhadas dos decks de Magic: The Gathering, incluindo os nomes e quantidades das cartas.
+
+
+
+
